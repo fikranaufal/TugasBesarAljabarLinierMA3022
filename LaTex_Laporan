@@ -1,0 +1,136 @@
+\documentclass[12pt, a4paper]{article}
+
+% --- PAKET YANG DIBUTUHKAN ---
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath} % Untuk rumus matematika
+\usepackage{graphicx} % Untuk menyisipkan gambar
+\usepackage{geometry} % Untuk mengatur margin
+\usepackage{booktabs} % Untuk tabel yang lebih bagus
+\usepackage{hyperref} % Untuk link (jika ada)
+
+% --- PENGATURAN GEOMETRI HALAMAN ---
+\geometry{
+    a4paper,
+    left=2.5cm,
+    right=2.5cm,
+    top=2.5cm,
+    bottom=2.5cm
+}
+
+% --- INFORMASI JUDUL ---
+\title{\textbf{Laporan Proyek: \\ Analisis Metode Pengenalan Wajah Menggunakan Eigenfaces Berbasis Dekomposisi Nilai Singular (SVD)}}
+\author{
+    Kelompok 02 \\
+    \textit{\small 10122097, 10123033, 10123055, 10123083}
+}
+\date{\today}
+
+% --- AWAL DOKUMEN ---
+\begin{document}
+
+\maketitle
+\hrule
+\vspace{1cm}
+
+\section{Pendahuluan}
+
+Gambar digital pada dasarnya adalah objek berdimensi tinggi. Sebuah foto grayscale sederhana berukuran 92x112 piksel, seperti yang digunakan dalam proyek ini, sudah mengandung 10.304 nilai piksel. Memperlakukan setiap piksel sebagai fitur independen dalam sistem pengenalan wajah menimbulkan dua tantangan besar:
+\begin{enumerate}
+    \item \textbf{Kutukan Dimensionalitas (\textit{Curse of Dimensionality}):} Dalam ruang berdimensi sangat tinggi, data menjadi sangat jarang. Perbedaan antar gambar lebih didominasi oleh variasi pencahayaan, rotasi kecil, atau derau (noise) daripada perbedaan identitas asli antar individu.
+    \item \textbf{Kebutuhan Komputasi dan Penyimpanan:} Menyimpan ribuan gambar dalam resolusi penuh dan membandingkannya satu per satu secara komputasi sangatlah mahal dan lambat.
+\end{enumerate}
+
+Namun, pengamatan menunjukkan bahwa sebagian besar variasi piksel dalam gambar wajah bersifat redundan. Identitas seseorang terletak pada sebuah manifold berdimensi jauh lebih rendah. Tujuan dari proyek ini adalah menggunakan Dekomposisi Nilai Singular (SVD) untuk mengatasi tantangan ini. SVD memungkinkan kita untuk menemukan representasi gambar yang ringkas, yang disebut \textbf{Eigenfaces}, yang menangkap mode variasi paling signifikan di antara banyak wajah sambil membuang detail yang tidak relevan.
+
+Dalam proyek ini, kami akan mengimplementasikan metode Eigenfaces untuk:
+\begin{itemize}
+    \item Menciptakan basis gambar (``ruang wajah") berdimensi rendah dari dataset wajah AT\&T.
+    \item Menguji efektivitas ruang terkompresi ini untuk tugas pengenalan wajah.
+    \item Menganalisis kualitas rekonstruksi gambar dari representasi dimensi rendahnya.
+\end{itemize}
+Kami menggunakan subset dari dataset AT\&T yang terdiri dari 6 subjek, dengan 4 gambar per subjek sebagai data latih dan 4 gambar sebagai data uji. Analisis dilakukan dengan menggunakan $k=10$ dan $k=20$ komponen utama (eigenfaces).
+
+\section{Metodologi}
+
+Proses implementasi metode Eigenfaces mengikuti langkah-langkah sistematis yang berpusat pada SVD.
+
+\subsection{Pra-pemrosesan dan Pemusatan Data}
+Setiap gambar grayscale berukuran 92x112 piksel "diratakan" (*flattened*) menjadi sebuah vektor kolom $\mathbf{x}_i \in \mathbb{R}^{10304}$. Total 48 gambar dari 6 subjek dibagi menjadi set data latih ($X_{\text{train}}$) dan data uji ($X_{\text{test}}$), masing-masing berisi 24 gambar.
+
+Langkah krusial sebelum SVD adalah menghitung ``wajah rata-rata" ($\mu$) dari data latih, yang kemudian dikurangkan dari setiap gambar latih untuk menghasilkan matriks data terpusat, $X_c$.
+\begin{equation*}
+    \mu = \frac{1}{24} \sum_{i=1}^{24} \mathbf{x}_i
+\end{equation*}
+\begin{equation*}
+    X_c = [\mathbf{x}_1-\mu \quad \mathbf{x}_2-\mu \quad \dots \quad \mathbf{x}_{24}-\mu]
+\end{equation*}
+
+\subsection{Dekomposisi Nilai Singular (SVD)}
+SVD diterapkan pada matriks data terpusat $X_c$ untuk mendapatkan dekomposisinya: $X_c = U \Sigma V^T$.
+\begin{itemize}
+    \item $U$: Matriks ortogonal 10304 x 24 yang kolom-kolomnya adalah \textbf{eigenfaces}.
+    \item $\Sigma$: Matriks diagonal 24 x 24 yang berisi nilai-nilai singular ($\sigma_i$).
+    \item $V^T$: Matriks ortogonal 24 x 24.
+\end{itemize}
+
+\subsection{Proyeksi, Klasifikasi, dan Rekonstruksi}
+Untuk mengompresi gambar, kami memproyeksikannya ke ruang wajah berdimensi $k$ untuk mendapatkan vektor koefisien $\mathbf{z} = U_k^T (\mathbf{x} - \mu)$, di mana $U_k$ adalah $k$ kolom pertama dari $U$. Klasifikasi dilakukan dengan metode \textit{Nearest Neighbor} pada ruang terproyeksi ini. Rekonstruksi gambar dilakukan dengan rumus $\hat{\mathbf{x}} = U_k \mathbf{z} + \mu$.
+
+\newpage
+
+\section{Hasil dan Pembahasan}
+
+\subsection{Visualisasi Eigenfaces}
+Gambar \ref{fig:eigenfaces} menampilkan wajah rata-rata ($\mu$) dan 6 eigenfaces pertama. Wajah rata-rata tampak seperti gabungan dari semua wajah dalam dataset. Eigenfaces, di sisi lain, tidak terlihat seperti wajah asli, melainkan seperti pola ``hantu" yang menyoroti fitur-fitur variasi. Eigenface 1, misalnya, tampaknya menangkap variasi pencahayaan dari kiri ke kanan.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{gambar 1 alin.png}
+    \caption{Wajah rata-rata dan 6 eigenfaces pertama. Setiap eigenface menangkap satu mode utama variasi dalam dataset.}
+    \label{fig:eigenfaces}
+\end{figure}
+
+\subsection{Akurasi Klasifikasi}
+Kami menguji sistem menggunakan $k=10$ dan $k=20$ eigenfaces. Hasil akurasi diringkas dalam Tabel \ref{tab:accuracy}.
+
+\begin{table}[h!]
+    \centering
+    \caption{Hasil akurasi klasifikasi pada data uji.}
+    \label{tab:accuracy}
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{k (Jumlah Eigenfaces)} & \textbf{Prediksi Benar} & \textbf{Total Uji} & \textbf{Akurasi} \\
+        \midrule
+        10 & 21 & 24 & \textbf{87.50\%} \\
+        20 & 21 & 24 & \textbf{87.50\%} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Hasilnya menunjukkan bahwa bahkan dengan hanya 10 komponen—kurang dari 0.1\% dari dimensi asli—sistem mampu mencapai akurasi yang sangat tinggi sebesar 87.50\%. Menariknya, penambahan komponen dari $k=10$ menjadi $k=20$ tidak meningkatkan akurasi. Ini mengindikasikan adanya \textit{diminishing returns}, di mana 10 komponen pertama sudah cukup menangkap hampir semua informasi yang relevan untuk membedakan antar subjek dalam dataset ini.
+
+\subsection{Rekonstruksi Gambar}
+Gambar \ref{fig:reconstruction} menunjukkan perbandingan antara gambar uji asli dari subjek 1 dan hasil rekonstruksinya menggunakan $k=10$.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{gambar 2 alin.png}
+    \caption{Perbandingan gambar asli (kiri) dan hasil rekonstruksinya menggunakan 10 eigenfaces (kanan).}
+    \label{fig:reconstruction}
+\end{figure}
+
+Terlihat jelas bahwa gambar hasil rekonstruksi berhasil menangkap esensi dari wajah asli, seperti struktur umum dan posisi fitur wajah, namun kehilangan detail berfrekuensi tinggi. Ini secara visual mengonfirmasi ide kompresi SVD: informasi penting dipertahankan, sementara detail yang kurang signifikan dibuang.
+
+\subsection{Kesimpulan}
+Proyek ini berhasil mendemonstrasikan Dekomposisi Nilai Singular (SVD) dalam analisis data berdimensi tinggi melalui metode Eigenfaces. SVD secara efektif mengekstraksi struktur berdimensi rendah yang tersembunyi dalam dataset gambar wajah, yang memungkinkan kompresi data yang signifikan sekaligus mempertahankan informasi penting untuk tugas pengenalan wajah. 
+
+\newpage
+\appendix
+
+\section{Kode Sumber Proyek}
+
+Kode sumber/\textit{Source code} yang digunakan pada proyek ini dapat diakses melalui Google Colab dengan \textbf{\href{https://colab.research.google.com/drive/1lWjyhCMOLV22OW-oF5IQwam2opP6uI20?usp=sharing}{klik di sini}}, atau melalui link berikut:
+\url{https://colab.research.google.com/drive/1lWjyhCMOLV22OW-oF5IQwam2opP6uI20?usp=sharing}
+
+
+\end{document}
